@@ -148,6 +148,10 @@ where
     pub fn min_population_size(&self) -> usize {
         self.min_population_size
     }
+
+    pub fn set_fitness_environment(&mut self, env: E) {
+        self.evaluator = env;
+    }
 }
 
 impl<G, F, E, S, C, M, R> TrackProcessingTime for GeneticAlgorithm<G, F, E, S, C, M, R>
