@@ -179,7 +179,7 @@ fn main() {
                 for row in best_solution.solution.genome.as_board() {
                     println!("      {:?}", row);
                 }
-            }
+            },
             Ok(SimResult::Final(step, processing_time, duration, stop_reason)) => {
                 let best_solution = step.result.best_solution;
                 println!("{}", stop_reason);
@@ -196,11 +196,11 @@ fn main() {
                     println!("      {:?}", row);
                 }
                 break;
-            }
+            },
             Err(error) => {
                 println!("{}", error);
                 break;
-            }
+            },
         }
     }
 }

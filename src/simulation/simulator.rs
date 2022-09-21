@@ -111,7 +111,7 @@ where
             SimError::AlgorithmError(ref error) => write!(f, "algorithm error: {}", error),
             SimError::SimulationAlreadyRunning(ref message) => {
                 write!(f, "simulation already running {}", message)
-            }
+            },
         }
     }
 }
@@ -191,34 +191,34 @@ where
                     "in loop mode since {}",
                     &self.started_at
                 )))
-            }
+            },
             RunMode::Step => {
                 return Err(SimError::SimulationAlreadyRunning(format!(
                     "in step mode since {}",
                     &self.started_at
                 )))
-            }
+            },
             RunMode::NotRunning => {
                 self.run_mode = RunMode::Loop;
                 self.started_at = Local::now();
-            }
+            },
         }
         let result = loop {
             match self.process_one_iteration() {
                 Ok(state) => {
                     // Stage 5: Be aware of the termination:
                     match self.termination.evaluate(&state) {
-                        StopFlag::Continue => {}
+                        StopFlag::Continue => {},
                         StopFlag::StopNow(reason) => {
                             let processing_time = self.processing_time;
                             let duration = Local::now().signed_duration_since(self.started_at);
                             break Ok(SimResult::Final(state, processing_time, duration, reason));
-                        }
+                        },
                     }
-                }
+                },
                 Err(error) => {
                     break Err(error);
-                }
+                },
             }
         };
         self.run_mode = RunMode::NotRunning;
@@ -232,12 +232,12 @@ where
                     "in loop mode since {}",
                     &self.started_at
                 )))
-            }
+            },
             RunMode::Step => (),
             RunMode::NotRunning => {
                 self.run_mode = RunMode::Step;
                 self.started_at = Local::now();
-            }
+            },
         }
         self.process_one_iteration().and_then(|state|
             // Stage 5: Be aware of the termination:
@@ -259,7 +259,7 @@ where
             RunMode::Loop | RunMode::Step => {
                 self.run_mode = RunMode::NotRunning;
                 Ok(true)
-            }
+            },
             RunMode::NotRunning => Ok(false),
         }
     }
@@ -272,14 +272,14 @@ where
                      simulation to finish or stop it before resetting it.",
                     &self.started_at
                 )))
-            }
+            },
             RunMode::Step => {
                 return Err(SimError::SimulationAlreadyRunning(format!(
                     "Simulation still running in step mode since {}. Wait for the \
                      simulation to finish or stop it before resetting it.",
                     &self.started_at
                 )))
-            }
+            },
             RunMode::NotRunning => (),
         }
         self.run_mode = RunMode::NotRunning;

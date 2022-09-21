@@ -92,12 +92,12 @@ where
     match n {
         1 => {
             cutpoints.push(random_index(rng, length));
-        }
+        },
         2 => {
             let (cp1, cp2) = random_cut_points(rng, length);
             cutpoints.push(cp1);
             cutpoints.push(cp2);
-        }
+        },
         _ => {
             let slice_len = length / n;
             let mut start = 0;
@@ -120,7 +120,7 @@ where
                     end += slice_len;
                 }
             }
-        }
+        },
     }
     cutpoints
 }
