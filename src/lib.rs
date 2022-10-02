@@ -99,6 +99,9 @@
 #[macro_use]
 extern crate galvanic_assert;
 
+#[macro_use]
+extern crate log;
+
 pub mod prelude;
 
 pub mod genetic;

@@ -24,24 +24,25 @@ all-features = true
 wasm-bindgen = ["wasm-bindgen_", "chrono/wasmbind"]
 
 [dependencies]
-chrono = "0.4"
-rand = { version = "0.8", default-features = false, features = ["getrandom"] }
-rand_xoshiro = "0.6"
-fixedbitset = { version = "0.4", optional = true }
-smallvec = { version = "1", optional = true }
+chrono = "^0.4"
+rand = { version = "^0.8", default-features = false, features = ["getrandom"] }
+rand_xoshiro = "^0.6"
+fixedbitset = { version = "^0.4", optional = true }
+smallvec = { version = "^1", optional = true }
+log = "^0.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rayon = "1"
+rayon = "^1"
 
 [target.'cfg(all(target_arch = "wasm32", not(any(target_os = "emscripten", target_os = "wasi"))))'.dependencies]
 wasm-bindgen_ = { version = "0.2", package = "wasm-bindgen", optional = true }
 getrandom = { version = "0.2", features = ["js", "wasm-bindgen"] }
 
 [dev-dependencies]
-criterion = "0.3"
-galvanic-assert = "0.8"
-proptest = "1"
-version-sync = "0.9"
+criterion = "^0.3"
+galvanic-assert = "^0.8"
+proptest = "^1"
+version-sync = "^0.9"
 
 [lib]
 bench = false

@@ -149,6 +149,7 @@ where
         self.min_population_size
     }
 
+    #[inline]
     pub fn set_fitness_environment(&mut self, env: E) {
         self.evaluator = env;
     }
@@ -202,16 +203,20 @@ where
 
         // Stage 2: The fitness check:
         let evaluation = evaluate_fitness(self.population.clone(), &self.evaluator);
+        debug!("evaluation: {:?}", evaluation);
         let best_solution = determine_best_solution(iteration, &evaluation.result);
+        debug!("best_solution: {:?}", best_solution);
 
         // Stage 3: The making of a new population:
         let selection = timed(|| self.selector.select_from(&evaluation.result, rng)).run();
+        debug!("selection: {:?}", selection);
         let mut breeding = par_breed_offspring(selection.result, &self.breeder, &self.mutator, rng);
         let reinsertion = timed(|| {
             self.reinserter
                 .combine(&mut breeding.result, &evaluation.result, rng)
         })
         .run();
+        debug!("reinsertion: {:?}", reinsertion);
 
         // Stage 4: On to the next generation:
         self.processing_time = evaluation.time
@@ -220,7 +225,12 @@ where
             + breeding.time
             + reinsertion.time;
         let next_generation = reinsertion.result;
-        self.population = Rc::new(next_generation);
+        let ng = Rc::new(next_generation);
+        debug_assert!(
+            !(self.population == ng),
+            "new population is exactly the old population"
+        );
+        self.population = ng;
         Ok(State {
             evaluated_population: evaluation.result,
             best_solution: best_solution.result,
