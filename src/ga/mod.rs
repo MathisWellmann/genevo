@@ -37,10 +37,10 @@ use crate::{
 use chrono::Local;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon;
+use std::sync::Arc;
 use std::{
     fmt::{self, Display},
     marker::PhantomData,
-    rc::Rc,
 };
 
 /// The `State` struct holds the results of one pass of the genetic algorithm
@@ -104,14 +104,14 @@ where
     R: ReinsertionOp<G, F>,
 {
     _f: PhantomData<F>,
-    evaluator: E,
+    evaluator: Arc<E>,
     selector: S,
     breeder: C,
     mutator: M,
     reinserter: R,
     min_population_size: usize,
-    initial_population: Population<G>,
-    population: Rc<Vec<G>>,
+    initial_population: Arc<Population<G>>,
+    population: Arc<Vec<G>>,
     processing_time: ProcessingTime,
 }
 
@@ -151,7 +151,7 @@ where
 
     #[inline]
     pub fn set_fitness_environment(&mut self, env: E) {
-        self.evaluator = env;
+        self.evaluator = Arc::new(env);
     }
 }
 
@@ -172,9 +172,9 @@ where
 
 impl<G, F, E, S, C, M, R> Algorithm for GeneticAlgorithm<G, F, E, S, C, M, R>
 where
-    G: Genotype,
-    F: Fitness + Send + Sync,
-    E: FitnessFunction<G, F> + Sync,
+    G: Genotype + 'static,
+    F: Fitness + Send + Sync + 'static,
+    E: FitnessFunction<G, F> + Send + Sync + 'static,
     S: SelectionOp<G, F>,
     C: CrossoverOp<G> + Sync,
     M: MutationOp<G> + Sync,
@@ -202,7 +202,7 @@ where
         }
 
         // Stage 2: The fitness check:
-        let evaluation = evaluate_fitness(self.population.clone(), &self.evaluator);
+        let evaluation = evaluate_fitness(self.population.clone(), self.evaluator.clone());
         debug!("evaluation: {:?}", evaluation);
         let best_solution = determine_best_solution(iteration, &evaluation.result);
         debug!("best_solution: {:?}", best_solution);
@@ -225,7 +225,7 @@ where
             + breeding.time
             + reinsertion.time;
         let next_generation = reinsertion.result;
-        let ng = Rc::new(next_generation);
+        let ng = Arc::new(next_generation);
         debug_assert!(
             !(self.population == ng),
             "new population is exactly the old population"
@@ -240,21 +240,21 @@ where
 
     fn reset(&mut self) -> Result<bool, Self::Error> {
         self.processing_time = ProcessingTime::zero();
-        self.population = Rc::new(self.initial_population.individuals().to_vec());
+        self.population = Arc::new(self.initial_population.individuals().to_vec());
         Ok(true)
     }
 }
 
 fn evaluate_fitness<G, F, E>(
-    population: Rc<Vec<G>>,
-    evaluator: &E,
+    population: Arc<Vec<G>>,
+    evaluator: Arc<E>,
 ) -> TimedResult<EvaluatedPopulation<G, F>>
 where
-    G: Genotype + Sync,
-    F: Fitness + Send + Sync,
-    E: FitnessFunction<G, F> + Sync,
+    G: Genotype + Sync + 'static,
+    F: Fitness + Send + Sync + 'static,
+    E: FitnessFunction<G, F> + Send + Sync + 'static,
 {
-    let evaluation = par_evaluate_fitness(&population, evaluator);
+    let evaluation = par_evaluate_fitness(population.clone(), evaluator.clone());
     let average = timed(|| evaluator.average(&evaluation.result.0)).run();
     let evaluated = EvaluatedPopulation::new(
         population,
@@ -272,54 +272,53 @@ where
 /// Calculates the `genetic::Fitness` value of each `genetic::Genotype` and
 /// records the highest and lowest values.
 #[cfg(not(target_arch = "wasm32"))]
-fn par_evaluate_fitness<G, F, E>(population: &[G], evaluator: &E) -> TimedResult<(Vec<F>, F, F)>
+fn par_evaluate_fitness<G, F, E>(
+    population: Arc<Vec<G>>,
+    evaluator: Arc<E>,
+) -> TimedResult<(Vec<F>, F, F)>
 where
-    G: Genotype + Sync,
-    F: Fitness + Send + Sync,
-    E: FitnessFunction<G, F> + Sync,
+    G: Genotype + Sync + 'static,
+    F: Fitness + Send + Sync + 'static,
+    E: FitnessFunction<G, F> + Send + Sync + 'static,
 {
-    if population.len() < 50 {
-        timed(|| {
-            let mut fitness = Vec::with_capacity(population.len());
-            let mut highest = evaluator.lowest_possible_fitness();
-            let mut lowest = evaluator.highest_possible_fitness();
-            for genome in population.iter() {
-                let score = evaluator.fitness_of(genome);
-                if score > highest {
-                    highest = score.clone();
-                }
-                if score < lowest {
-                    lowest = score.clone();
-                }
-                fitness.push(score);
-            }
-            (fitness, highest, lowest)
-        })
-        .run()
-    } else {
-        let mid_point = population.len() / 2;
-        let (l_slice, r_slice) = population.split_at(mid_point);
-        let (mut left, mut right) = rayon::join(
-            || par_evaluate_fitness(l_slice, evaluator),
-            || par_evaluate_fitness(r_slice, evaluator),
-        );
-        let mut fitness = Vec::with_capacity(population.len());
-        fitness.append(&mut left.result.0);
-        fitness.append(&mut right.result.0);
-        let highest = if left.result.1 >= right.result.1 {
-            left.result.1
-        } else {
-            right.result.1
-        };
-        let lowest = if left.result.2 <= right.result.2 {
-            left.result.2
-        } else {
-            right.result.2
-        };
-        TimedResult {
-            result: (fitness, highest, lowest),
-            time: left.time + right.time,
+    use threadpool::ThreadPool;
+
+    let started_at = Local::now();
+
+    // TODO: this could be configurable on a higher level
+    let n_workers = num_cpus::get();
+    let pool = ThreadPool::new(n_workers);
+
+    let (tx, rx) = std::sync::mpsc::channel();
+    for (i, g) in population.iter().enumerate() {
+        let tx = tx.clone();
+        let g = g.clone();
+        let e = evaluator.clone();
+
+        pool.execute(move || {
+            let score = e.fitness_of(&g);
+            tx.send((i, score))
+                .expect("channel will be there waiting for the pool");
+        });
+    }
+
+    let mut highest = <F as Fitness>::min();
+    let mut lowest = <F as Fitness>::max();
+    let mut fits: Vec<F> = vec![<F as Fitness>::zero(); population.len()];
+    rx.iter().take(population.len()).for_each(|(i, score)| {
+        fits[i] = score;
+        if score > highest {
+            highest = score;
         }
+        if score < lowest {
+            lowest = score;
+        }
+    });
+
+    let duration = Local::now().signed_duration_since(started_at);
+    TimedResult {
+        result: (fits, highest, lowest),
+        time: duration.into(),
     }
 }
 

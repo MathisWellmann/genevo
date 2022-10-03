@@ -5,7 +5,7 @@ use crate::{
     population::Population,
     statistic::ProcessingTime,
 };
-use std::{marker::PhantomData, rc::Rc};
+use std::{marker::PhantomData, rc::Rc, sync::Arc};
 
 const DEFAULT_MIN_POPULATION_SIZE: usize = 6;
 
@@ -21,13 +21,13 @@ where
     R: ReinsertionOp<G, F>,
 {
     _f: PhantomData<F>,
-    evaluator: E,
+    evaluator: Arc<E>,
     selector: S,
     breeder: C,
     mutator: M,
     reinserter: R,
     min_population_size: usize,
-    initial_population: Population<G>,
+    initial_population: Arc<Population<G>>,
 }
 
 impl<G, F, E, S, C, M, R> GeneticAlgorithmBuilder<G, F, E, S, C, M, R>
@@ -49,7 +49,7 @@ where
             mutator: self.mutator,
             reinserter: self.reinserter,
             min_population_size: self.min_population_size,
-            population: Rc::new(self.initial_population.individuals().to_vec()),
+            population: Arc::new(self.initial_population.individuals().to_vec()),
             initial_population: self.initial_population,
             processing_time: ProcessingTime::zero(),
         }
@@ -91,7 +91,7 @@ where
         GeneticAlgorithmWithEvalBuilder {
             _g: self._g,
             _f: self._f,
-            evaluator: fitness_function,
+            evaluator: Arc::new(fitness_function),
         }
     }
 }
@@ -105,7 +105,7 @@ where
 {
     _g: PhantomData<G>,
     _f: PhantomData<F>,
-    evaluator: E,
+    evaluator: Arc<E>,
 }
 
 impl<G, F, E> GeneticAlgorithmWithEvalBuilder<G, F, E>
@@ -140,7 +140,7 @@ where
 {
     _g: PhantomData<G>,
     _f: PhantomData<F>,
-    evaluator: E,
+    evaluator: Arc<E>,
     selector: S,
 }
 
@@ -179,7 +179,7 @@ where
 {
     _g: PhantomData<G>,
     _f: PhantomData<F>,
-    evaluator: E,
+    evaluator: Arc<E>,
     selector: S,
     breeder: C,
 }
@@ -222,7 +222,7 @@ where
 {
     _g: PhantomData<G>,
     _f: PhantomData<F>,
-    evaluator: E,
+    evaluator: Arc<E>,
     selector: S,
     breeder: C,
     mutator: M,
@@ -269,7 +269,7 @@ where
 {
     _g: PhantomData<G>,
     _f: PhantomData<F>,
-    evaluator: E,
+    evaluator: Arc<E>,
     selector: S,
     breeder: C,
     mutator: M,
@@ -288,7 +288,7 @@ where
 {
     pub fn with_initial_population(
         self,
-        initial_population: Population<G>,
+        initial_population: Arc<Population<G>>,
     ) -> GeneticAlgorithmBuilder<G, F, E, S, C, M, R>
     where
         R: ReinsertionOp<G, F>,

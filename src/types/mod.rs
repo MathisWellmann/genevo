@@ -29,6 +29,14 @@ macro_rules! implement_fitness_for_signed_integer {
                     0
                 }
 
+                fn max() -> $t {
+                    <$t>::MAX
+                }
+
+                fn min() -> $t {
+                    <$t>::MIN
+                }
+
                 fn abs_diff(&self, other: &$t) -> $t {
                     let diff = self - other;
                     diff.abs()
@@ -53,6 +61,14 @@ macro_rules! implement_fitness_for_unsigned_integer {
             impl Fitness for $t {
                 fn zero() -> $t {
                     0
+                }
+
+                fn max() -> $t {
+                    <$t>::MAX
+                }
+
+                fn min() -> $t {
+                    <$t>::MIN
                 }
 
                 fn abs_diff(&self, other: &$t) -> $t {

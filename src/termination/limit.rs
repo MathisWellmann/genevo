@@ -55,10 +55,9 @@ where
 
 impl<G, F, E, S, C, M, R> Termination<GeneticAlgorithm<G, F, E, S, C, M, R>> for FitnessLimit<G, F>
 where
-    G: Genotype,
-    F: Fitness + Send + Sync,
-    E: FitnessFunction<G, F>,
-    E: FitnessFunction<G, F> + Sync,
+    G: Genotype + 'static,
+    F: Fitness + Send + Sync + 'static,
+    E: FitnessFunction<G, F> + Send + Sync + 'static,
     S: SelectionOp<G, F>,
     C: CrossoverOp<G> + Sync,
     M: MutationOp<G> + Sync,

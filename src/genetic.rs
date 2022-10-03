@@ -77,10 +77,16 @@ pub type Offspring<G> = Vec<G>;
 /// of the multi-objective `Fitness` value additionally implements the
 /// `AsScalar` trait. Using single-objective optimization for multi-objective
 /// problems has some drawbacks though.
-pub trait Fitness: Eq + Ord + Clone + Debug + Sized {
+pub trait Fitness: Eq + Ord + Clone + Copy + Debug + Sized {
     /// Returns the zero value of this `Fitness` value.
     /// The internal value should be 0.
     fn zero() -> Self;
+
+    /// Returns the minimum value possible
+    fn min() -> Self;
+
+    /// Returns the maximum value possible
+    fn max() -> Self;
 
     /// Returns the absolute difference between this `Fitness` value and the
     /// other one, i.e. result = |self| - |other|
