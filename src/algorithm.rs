@@ -7,7 +7,7 @@ use crate::{
     random::Prng,
 };
 use chrono::{DateTime, Local};
-use std::{error::Error, fmt::Debug, rc::Rc, sync::Arc};
+use std::{error::Error, fmt::Debug, sync::Arc};
 
 /// An `Algorithm` defines the steps to be processed in a
 /// `simulation::Simulation`. The `Simulation` uses an implementation of an

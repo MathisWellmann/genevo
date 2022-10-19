@@ -44,7 +44,7 @@ fn create_new_genetic_algorithm_application() {
         .with_mutation(RandomValueMutator::new(0.015, -2.0, 2.0))
         .with_reinsertion(ElitistReinserter::new(MyFitnessEvaluator, false, 0.7))
         .with_initial_population(initial_population)
-        .build();
+        .build(1);
 
     assert_that!(&algorithm.selector().selection_ratio(), eq(0.7));
     assert_that!(&algorithm.selector().num_individuals_per_parents(), eq(2));

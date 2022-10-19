@@ -113,6 +113,7 @@ where
     initial_population: Arc<Population<G>>,
     population: Arc<Vec<G>>,
     processing_time: ProcessingTime,
+    n_threads: usize,
 }
 
 impl<G, F, E, S, C, M, R> GeneticAlgorithm<G, F, E, S, C, M, R>
@@ -202,7 +203,11 @@ where
         }
 
         // Stage 2: The fitness check:
-        let evaluation = evaluate_fitness(self.population.clone(), self.evaluator.clone());
+        let evaluation = evaluate_fitness(
+            self.population.clone(),
+            self.evaluator.clone(),
+            self.n_threads,
+        );
         debug!("evaluation: {:?}", evaluation);
         let best_solution = determine_best_solution(iteration, &evaluation.result);
         debug!("best_solution: {:?}", best_solution);
@@ -248,13 +253,14 @@ where
 fn evaluate_fitness<G, F, E>(
     population: Arc<Vec<G>>,
     evaluator: Arc<E>,
+    n_threads: usize,
 ) -> TimedResult<EvaluatedPopulation<G, F>>
 where
     G: Genotype + Sync + 'static,
     F: Fitness + Send + Sync + 'static,
     E: FitnessFunction<G, F> + Send + Sync + 'static,
 {
-    let evaluation = par_evaluate_fitness(population.clone(), evaluator.clone());
+    let evaluation = par_evaluate_fitness(population.clone(), evaluator.clone(), n_threads);
     let average = timed(|| evaluator.average(&evaluation.result.0)).run();
     let evaluated = EvaluatedPopulation::new(
         population,
@@ -275,6 +281,7 @@ where
 fn par_evaluate_fitness<G, F, E>(
     population: Arc<Vec<G>>,
     evaluator: Arc<E>,
+    n_threads: usize,
 ) -> TimedResult<(Vec<F>, F, F)>
 where
     G: Genotype + Sync + 'static,
@@ -285,9 +292,7 @@ where
 
     let started_at = Local::now();
 
-    // TODO: this could be configurable on a higher level
-    let n_workers = num_cpus::get();
-    let pool = ThreadPool::new(n_workers);
+    let pool = ThreadPool::new(n_threads);
 
     let (tx, rx) = std::sync::mpsc::channel();
     for (i, g) in population.iter().enumerate() {

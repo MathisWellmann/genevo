@@ -5,7 +5,7 @@ use crate::{
     population::Population,
     statistic::ProcessingTime,
 };
-use std::{marker::PhantomData, rc::Rc, sync::Arc};
+use std::{marker::PhantomData, sync::Arc};
 
 const DEFAULT_MIN_POPULATION_SIZE: usize = 6;
 
@@ -40,7 +40,7 @@ where
     M: MutationOp<G>,
     R: ReinsertionOp<G, F>,
 {
-    pub fn build(self) -> GeneticAlgorithm<G, F, E, S, C, M, R> {
+    pub fn build(self, n_threads: usize) -> GeneticAlgorithm<G, F, E, S, C, M, R> {
         GeneticAlgorithm {
             _f: self._f,
             evaluator: self.evaluator,
@@ -52,6 +52,7 @@ where
             population: Arc::new(self.initial_population.individuals().to_vec()),
             initial_population: self.initial_population,
             processing_time: ProcessingTime::zero(),
+            n_threads,
         }
     }
 
