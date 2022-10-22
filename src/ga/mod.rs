@@ -37,10 +37,10 @@ use crate::{
 use chrono::Local;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon;
-use std::sync::Arc;
 use std::{
     fmt::{self, Display},
     marker::PhantomData,
+    sync::Arc,
 };
 
 /// The `State` struct holds the results of one pass of the genetic algorithm
